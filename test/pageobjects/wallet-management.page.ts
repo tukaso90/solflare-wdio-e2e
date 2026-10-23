@@ -1,5 +1,21 @@
 import BasePage from './base.page.ts';
 
+// Both the wallet-row and toggle testids are the wallet's public key
+// appended to one of these prefixes. The key is generated fresh for every
+// wallet created in every test run, so it can never be hardcoded — list
+// items are matched by position (see walletListItems/walletToggles below),
+// and the key is read back from the testid itself when the test needs to
+// assert on *which* wallets ended up in the final list.
+const WALLET_ROW_TESTID_PREFIX = 'li-wallets-';
+const WALLET_TOGGLE_TESTID_PREFIX = 'tgl-li-wallets-';
+
+function publicKeyFromTestId(testId: string | null, prefix: string): string {
+    if (!testId?.startsWith(prefix)) {
+        throw new Error(`Expected a testid starting with "${prefix}", got "${testId}"`);
+    }
+    return testId.slice(prefix.length);
+}
+
 /**
  * "My wallets" management panel, opened from the avatar in the app header.
  *
@@ -32,17 +48,19 @@ class WalletManagementPage extends BasePage {
     }
 
     // Wallet rows rendered under "Recovery phrase" in the "My wallets" panel.
-    // Each row's data-testid is suffixed with that wallet's public key,
-    // which is generated fresh on every run, so rows are matched by
-    // position rather than by a fixed testid.
+    // Scoped to the stable testid prefix rather than a page-wide selector;
+    // see the WALLET_ROW_TESTID_PREFIX comment above for why positional
+    // matching is still required on top of that.
     public get walletListItems() {
-        return $$('[data-testid^="li-wallets-"]');
+        return $$(`[data-testid^="${WALLET_ROW_TESTID_PREFIX}"]`);
     }
 
-    // Visibility toggles on the "Show or hide wallets" screen. Same
-    // positional-matching constraint as walletListItems above.
+    // Visibility toggles on the "Show or hide wallets" screen. Scoped to the
+    // stable testid prefix (rather than the page-wide [role="switch"]) so
+    // this can't accidentally match an unrelated switch control elsewhere
+    // on the screen. Same positional-matching constraint as walletListItems.
     public get walletToggles() {
-        return $$('[role="switch"]');
+        return $$(`[data-testid^="${WALLET_TOGGLE_TESTID_PREFIX}"]`);
     }
 
     public async openWalletManagement(): Promise<void> {
@@ -54,6 +72,21 @@ class WalletManagementPage extends BasePage {
         const firstWallet = this.walletListItems[0];
         await firstWallet.waitForDisplayed();
         return (await firstWallet.getText()).includes('Main Wallet');
+    }
+
+    /**
+     * Public keys of every wallet currently shown in the recovery-phrase
+     * list, in list order. Used to capture the main wallet's identity
+     * before selection, and to verify list membership after saving.
+     */
+    public async getWalletPublicKeys(): Promise<string[]> {
+        const items = await this.walletListItems;
+        const publicKeys: string[] = [];
+        for (const item of items) {
+            const testId = await item.getAttribute('data-testid');
+            publicKeys.push(publicKeyFromTestId(testId, WALLET_ROW_TESTID_PREFIX));
+        }
+        return publicKeys;
     }
 
     public async openShowOrHideWallets(): Promise<void> {
@@ -77,13 +110,21 @@ class WalletManagementPage extends BasePage {
 
     /**
      * Toggles on the wallets at the given 1-based list positions, matching
-     * the "select the 3rd and 4th list item" wording in the test steps.
+     * the "select the 3rd and 4th list item" wording in the test steps, and
+     * returns each selected wallet's public key (read from its toggle's
+     * testid before clicking) so the caller can assert on wallet identity
+     * later rather than just a count.
      */
-    public async selectWalletsAtPositions(positions: number[]): Promise<void> {
+    public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
         const toggles = this.walletToggles;
+        const publicKeys: string[] = [];
         for (const position of positions) {
-            await toggles[position - 1].click();
+            const toggle = toggles[position - 1];
+            const testId = await toggle.getAttribute('data-testid');
+            publicKeys.push(publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX));
+            await toggle.click();
         }
+        return publicKeys;
     }
 
     public async save(): Promise<void> {
@@ -93,15 +134,6 @@ class WalletManagementPage extends BasePage {
         // Saving navigates back from the toggle screen to the wallet list;
         // wait for that screen to unmount so the list isn't read mid-transition.
         await this.btnSave.waitForExist({ reverse: true });
-    }
-
-    public async getWalletNames(): Promise<string[]> {
-        const items = await this.walletListItems;
-        const names: string[] = [];
-        for (const item of items) {
-            names.push(await item.getText());
-        }
-        return names;
     }
 }
 

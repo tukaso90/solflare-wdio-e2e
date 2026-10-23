@@ -17,17 +17,20 @@ describe('Wallet onboarding', () => {
 
         await walletManagementPage.openWalletManagement();
         expect(await walletManagementPage.isMainWalletDisplayed()).toBe(true);
+        const [mainWalletPublicKey] = await walletManagementPage.getWalletPublicKeys();
 
         await walletManagementPage.openShowOrHideWallets();
         expect(await walletManagementPage.isFirstToggleDisabled()).toBe(true);
         expect(await walletManagementPage.isFirstToggleOn()).toBe(true);
 
-        await walletManagementPage.selectWalletsAtPositions([3, 4]);
+        const selectedPublicKeys = await walletManagementPage.selectWalletsAtPositions([3, 4]);
         await walletManagementPage.save();
 
-        // Original wallet plus the two newly added ones.
-        const walletNames = await walletManagementPage.getWalletNames();
-        expect(walletNames).toHaveLength(3);
-        expect(walletNames[0]).toContain('Main Wallet');
+        // The recovery phrase list must contain exactly the original wallet
+        // plus the two newly selected ones — not just the right count.
+        const finalPublicKeys = await walletManagementPage.getWalletPublicKeys();
+        expect(finalPublicKeys.sort()).toEqual(
+            [mainWalletPublicKey, ...selectedPublicKeys].sort()
+        );
     });
 });
