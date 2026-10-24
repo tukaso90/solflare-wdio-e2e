@@ -13,24 +13,30 @@ describe('Wallet onboarding', () => {
         await onboardingPage.startWalletCreation();
         await onboardingPage.setPassword(TEST_PASSWORD);
         await onboardingPage.acceptTerms();
+        await expect(onboardingPage.checkboxTermsAccepted).toBeSelected();
         await onboardingPage.clickContinue();
 
         await walletManagementPage.openWalletManagement();
-        expect(await walletManagementPage.isMainWalletDisplayed()).toBe(true);
+        await expect(walletManagementPage.firstWalletListItem).toBeDisplayed();
+        await expect(walletManagementPage.firstWalletListItem).toHaveText('Main Wallet', { containing: true });
         const [mainWalletPublicKey] = await walletManagementPage.getWalletPublicKeys();
 
         await walletManagementPage.openShowOrHideWallets();
-        expect(await walletManagementPage.isFirstToggleDisabled()).toBe(true);
-        expect(await walletManagementPage.isFirstToggleOn()).toBe(true);
+        await expect(walletManagementPage.firstWalletToggle).toBeDisabled();
+        await expect(walletManagementPage.firstWalletToggle).toHaveAttribute('data-state', 'checked');
 
-        const selectedPublicKeys = await walletManagementPage.selectWalletsAtPositions([3, 4]);
+        const selectedWallets = await walletManagementPage.selectWalletsAtPositions([3, 4]);
+        for (const { toggle } of selectedWallets) {
+            await expect(toggle).toHaveAttribute('data-state', 'checked');
+        }
+
         await walletManagementPage.save();
+        await walletManagementPage.waitForWalletCount(1 + selectedWallets.length);
 
         // The recovery phrase list must contain exactly the original wallet
         // plus the two newly selected ones — not just the right count.
         const finalPublicKeys = await walletManagementPage.getWalletPublicKeys();
-        expect(finalPublicKeys.sort()).toEqual(
-            [mainWalletPublicKey, ...selectedPublicKeys].sort()
-        );
+        const selectedPublicKeys = selectedWallets.map((wallet) => wallet.publicKey);
+        expect(finalPublicKeys.sort()).toEqual([mainWalletPublicKey, ...selectedPublicKeys].sort());
     });
 });

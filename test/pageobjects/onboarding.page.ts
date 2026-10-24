@@ -34,6 +34,18 @@ class OnboardingPage extends BasePage {
         return $('input[name="termsAccepted"]');
     }
 
+    // The checkbox's visible click target is a wrapping <label> sized to
+    // the checkbox box itself (24x24px) — the input is a 1x1px
+    // accessibility target with no visible box of its own. That inner
+    // label is itself nested inside a second, outer <label> spanning the
+    // whole "I agree to the Terms of Service and Privacy Policy." row
+    // (which also wraps the two links), so a plain `ancestor::label` match
+    // is ambiguous: it resolves to both. This XPath isolates the inner one
+    // by selecting the ancestor label that itself contains no nested label.
+    public get labelTermsAccepted() {
+        return $('//input[@name="termsAccepted"]/ancestor::label[not(.//label)]');
+    }
+
     public get btnContinue() {
         return $('[data-testid="btn-continue"]');
     }
@@ -63,23 +75,14 @@ class OnboardingPage extends BasePage {
     }
 
     /**
-     * The native checkbox renders as a visually-hidden 1x1px accessibility
-     * target with the visible box drawn by its wrapping <label>, so the
-     * label (the surface a real user clicks) is what gets clicked here.
+     * Clicks the checkbox's wrapping <label> rather than the checkbox
+     * itself — the input is a 1x1px accessibility target, so a real user
+     * clicks the visible label instead. See labelTermsAccepted above for
+     * why it's resolved via XPath rather than the checkbox's own selector.
      */
     public async acceptTerms(): Promise<void> {
         logger.info('Accepting the Terms of Service and Privacy Policy');
-        await this.checkboxTermsAccepted.waitForExist();
-        const checkbox = await this.checkboxTermsAccepted;
-        const clicked = await browser.execute((el) => {
-            const label = (el as HTMLElement).closest('label');
-            label?.click();
-            return label !== null;
-        }, checkbox);
-
-        if (!clicked) {
-            throw new Error('Terms checkbox has no wrapping <label> to click — markup may have changed.');
-        }
+        await this.clickWhenReady(this.labelTermsAccepted);
     }
 
     public async clickContinue(): Promise<void> {

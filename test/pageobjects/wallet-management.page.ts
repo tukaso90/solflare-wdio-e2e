@@ -17,13 +17,21 @@ function publicKeyFromTestId(testId: string | null, prefix: string): string {
     return testId.slice(prefix.length);
 }
 
+/** A wallet toggled on from the "Show or hide wallets" screen. */
+export interface SelectedWallet {
+    toggle: WebdriverIO.Element;
+    publicKey: string;
+}
+
 /**
  * "My wallets" management panel, opened from the avatar in the app header.
  *
  * Models the recovery-phrase wallet list: viewing the main wallet, opening
  * the "Show or hide wallets" screen, toggling additional wallets on, and
  * saving. The panel this page object targets is reached from the portfolio
- * page the app lands on right after onboarding.
+ * page the app lands on right after onboarding. Exposes elements (rather
+ * than pre-computed booleans) so the spec can assert on them directly with
+ * expect-webdriverio matchers.
  */
 class WalletManagementPage extends BasePage {
     // Targets the avatar itself rather than the wider wallet-picker section:
@@ -56,6 +64,12 @@ class WalletManagementPage extends BasePage {
         return $$(`[data-testid^="${WALLET_ROW_TESTID_PREFIX}"]`);
     }
 
+    // The main wallet's row: always first, and the only one present before
+    // any wallets are added.
+    public get firstWalletListItem() {
+        return this.walletListItems[0];
+    }
+
     // Visibility toggles on the "Show or hide wallets" screen. Scoped to the
     // stable testid prefix (rather than the page-wide [role="switch"]) so
     // this can't accidentally match an unrelated switch control elsewhere
@@ -64,17 +78,15 @@ class WalletManagementPage extends BasePage {
         return $$(`[data-testid^="${WALLET_TOGGLE_TESTID_PREFIX}"]`);
     }
 
+    // The main wallet's toggle: always first, and always on and disabled —
+    // the main wallet can't be hidden.
+    public get firstWalletToggle() {
+        return this.walletToggles[0];
+    }
+
     public async openWalletManagement(): Promise<void> {
         logger.info('Opening wallet management via the header avatar');
         await this.clickWhenReady(this.avatarWalletPicker);
-    }
-
-    public async isMainWalletDisplayed(): Promise<boolean> {
-        const firstWallet = this.walletListItems[0];
-        await firstWallet.waitForDisplayed();
-        const isDisplayed = (await firstWallet.getText()).includes('Main Wallet');
-        logger.info(`Checked "Main Wallet" is displayed: ${isDisplayed}`);
-        return isDisplayed;
     }
 
     /**
@@ -92,28 +104,29 @@ class WalletManagementPage extends BasePage {
         return publicKeys;
     }
 
+    /**
+     * Waits until the recovery-phrase list renders exactly `expectedCount`
+     * rows. Intended to be called after save() — saving navigates back from
+     * the toggle screen to this list, and this is what confirms that
+     * transition finished (and actually took effect) before the caller
+     * reads the list's contents.
+     */
+    public async waitForWalletCount(expectedCount: number): Promise<void> {
+        await browser.waitUntil(
+            async () => (await this.walletListItems).length === expectedCount,
+            {
+                timeout: 10000,
+                timeoutMsg: `Expected ${expectedCount} wallet(s) in the recovery phrase list, but the count never matched.`
+            }
+        );
+    }
+
     public async openShowOrHideWallets(): Promise<void> {
         logger.info('Opening the recovery phrase options menu');
         await this.clickWhenReady(this.recoveryPhraseOptionsButton);
 
         logger.info('Clicking "Show or hide wallets"');
         await this.clickWhenReady(this.btnShowOrHideWallets);
-    }
-
-    public async isFirstToggleDisabled(): Promise<boolean> {
-        const firstToggle = this.walletToggles[0];
-        await firstToggle.waitForDisplayed();
-        const isDisabled = !(await firstToggle.isEnabled());
-        logger.info(`Checked first wallet toggle is disabled: ${isDisabled}`);
-        return isDisabled;
-    }
-
-    public async isFirstToggleOn(): Promise<boolean> {
-        const firstToggle = this.walletToggles[0];
-        await firstToggle.waitForDisplayed();
-        const isOn = (await firstToggle.getAttribute('data-state')) === 'checked';
-        logger.info(`Checked first wallet toggle is on: ${isOn}`);
-        return isOn;
     }
 
     /**
@@ -136,22 +149,22 @@ class WalletManagementPage extends BasePage {
 
     /**
      * Toggles on the wallets at the given 1-based list positions, matching
-     * the "select the 3rd and 4th list item" wording in the test steps, and
-     * returns each selected wallet's public key (read from its toggle's
-     * testid before clicking) so the caller can assert on wallet identity
-     * later rather than just a count.
+     * the "select the 3rd and 4th list item" wording in the test steps.
+     * Returns each toggle element alongside the public key read from its
+     * testid before clicking, so the caller can assert on both the
+     * toggle's resulting state and wallet identity.
      */
-    public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
-        const publicKeys: string[] = [];
+    public async selectWalletsAtPositions(positions: number[]): Promise<SelectedWallet[]> {
+        const selected: SelectedWallet[] = [];
         for (const position of positions) {
             const toggle = await this.getToggleAtPosition(position);
             const testId = await toggle.getAttribute('data-testid');
             const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
-            publicKeys.push(publicKey);
             logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
             await this.clickWhenReady(toggle);
+            selected.push({ toggle, publicKey });
         }
-        return publicKeys;
+        return selected;
     }
 
     public async save(): Promise<void> {
@@ -159,10 +172,9 @@ class WalletManagementPage extends BasePage {
         await this.clickWhenReady(this.btnSave);
 
         // Saving navigates back from the toggle screen to the wallet list;
-        // wait for that screen to unmount, then for the wallet list to
-        // actually render, so callers never read it mid-transition.
+        // wait for that screen to unmount before the caller reads the list
+        // (via waitForWalletCount, which confirms the list itself updated).
         await this.btnSave.waitForExist({ reverse: true });
-        await this.walletListItems[0].waitForDisplayed();
     }
 }
 
