@@ -47,9 +47,17 @@ function buildCapabilities(browserName: SupportedBrowser, headless: boolean): We
                 // --headless=new matches modern Chrome's headed rendering
                 // path, which this app (canvas-heavy wallet UI) relies on.
                 // Window size is pinned separately in the `before` hook below.
-                // NOTE: Solflare's bot protection currently blocks sessions
-                // launched with --headless=new specifically — see README.
-                args: headless ? ['--headless=new'] : []
+                // The user-agent override replaces Chrome's default
+                // "HeadlessChrome/<version>" token with a standard one:
+                // Solflare's bot protection blocks sessions that advertise
+                // themselves as headless Chrome specifically (confirmed by
+                // testing — see README), and this is enough to pass.
+                args: headless
+                    ? [
+                          '--headless=new',
+                          '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36'
+                      ]
+                    : []
             }
         }
     ];

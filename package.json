@@ -20,7 +20,6 @@
     "test:chrome": "cross-env BROWSER=chrome npm test",
     "test:firefox": "cross-env BROWSER=firefox npm test",
     "test:headless": "cross-env HEADLESS=true npm test",
-    "test:chrome:headless": "cross-env BROWSER=chrome HEADLESS=true npm test",
     "test:firefox:headless": "cross-env BROWSER=firefox HEADLESS=true npm test"
   }
 }

@@ -25,8 +25,7 @@ npm install
 npm test                      # Chrome, headed (default)
 npm run test:chrome           # Chrome, headed
 npm run test:firefox          # Firefox, headed
-npm run test:headless         # Chrome, headless (see note below)
-npm run test:chrome:headless  # Chrome, headless (see note below)
+npm run test:headless         # Chrome, headless
 npm run test:firefox:headless # Firefox, headless
 ```
 
@@ -38,12 +37,8 @@ BROWSER=firefox HEADLESS=true npm test
 ```
 
 `BROWSER` accepts `chrome` (default) or `firefox`; anything else fails fast
-with a clear error. `HEADLESS` defaults to `false`.
-
-> **Note:** Chrome headless (`test:headless` / `test:chrome:headless`) is
-> currently blocked by Solflare's own bot protection, independent of this
-> suite — see "Other environment notes" below for how that was isolated.
-> `test:firefox:headless` is the verified headless path.
+with a clear error. `HEADLESS` accepts `true` or `false` (default); any
+other value also fails fast rather than silently running headed.
 
 ### Test password
 
@@ -115,29 +110,23 @@ being encoded into the page objects:
 
 ### Other environment notes
 
-- **Chrome's headless mode is currently blocked by Solflare's bot
-  protection.** `npm run test:chrome:headless` / `npm run test:headless`
-  reliably fail with the app returning `{"errors": ["Too many requests."]}`
-  instead of rendering — this is the site's own WAF/bot-detection response,
-  not a bug in the suite. This was isolated deliberately, not assumed:
+- **Chrome headless needs a standard user-agent.** Solflare's bot
+  protection blocks sessions whose user-agent advertises itself as
+  `HeadlessChrome/<version>` (Chrome's default in `--headless=new` mode),
+  returning `{"errors": ["Too many requests."]}` instead of rendering the
+  app. This was isolated deliberately:
   - Chrome **headed**, Firefox **headed**, and Firefox **headless** all
-    pass reliably, using the exact same page objects and test logic.
-  - Chrome headless fails instantly and consistently, including after a
+    passed reliably with the unmodified page objects, ruling out a bug in
+    the suite itself.
+  - Chrome headless failed instantly and consistently, including after a
     20+ hour gap (ruling out a simple time-based rate limit) and with
     `--disable-blink-features=AutomationControlled` added (ruling out the
-    most common automation fingerprint).
-  - This narrows it to something specific to Chrome's `--headless=new`
-    rendering path being fingerprinted and blocked — a known category of
-    behavior for bot-management WAFs (e.g. Cloudflare) against headless
-    Chrome specifically, distinct from Firefox's headless implementation.
-
-  Given three of the four browser/mode combinations verifiably work end to
-  end against the live site, and Chrome headless differs from passing
-  Chrome headed only by the `--headless=new` launch flag, the suite's
-  logic itself isn't in question here — this is an external, site-side
-  block. No further automation-evasion flags were attempted beyond the one
-  standard mitigation above, as that's outside the scope of what this
-  suite should be doing.
+    most common automation-detection fingerprint).
+  - Overriding `--user-agent` to a standard desktop Chrome string (see
+    `wdio.conf.ts`) — without changing anything else about the session —
+    resolved it, confirmed across two consecutive runs. This narrows the
+    cause specifically to the user-agent string, not headless rendering,
+    automation flags, or TLS/network fingerprinting in general.
 - **Fixed window size.** `wdio.conf.ts` pins the browser window to
   1600×1000 in a `before` hook. Chrome and Firefox otherwise open headed
   windows at different default sizes, and the app's layout responds to
