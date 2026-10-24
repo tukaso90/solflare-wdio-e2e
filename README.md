@@ -95,13 +95,11 @@ tsconfig.json
 
 ## Test data cleanup
 
-No cleanup step is needed after a test run. Solflare is a self-custodial
-wallet: "creating a wallet" is a purely client-side operation (a BIP39
-recovery phrase and keypairs derived from it, stored only in the browser's
-`localStorage`) — nothing is registered on Solflare's servers just by
-generating one. On top of that, each run launches Chrome/Firefox with a
-fresh temporary profile that the driver deletes when the session ends, so
-even that local storage doesn't persist between runs.
+No cleanup step is needed after a test run. The wallet this test creates
+is generated client-side and stored in the browser profile. WebdriverIO
+starts every session with a fresh temporary profile and discards it when
+the session ends, so each run is isolated and no test data accumulates
+between runs.
 
 ## Assumptions and deviations from the written steps
 
