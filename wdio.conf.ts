@@ -9,7 +9,7 @@ const SUPPORTED_BROWSERS: SupportedBrowser[] = ['chrome', 'firefox'];
 // `BROWSER=firefox HEADLESS=true npm test` (see package.json for the
 // matching npm run shortcuts). Both default to a headed Chrome run.
 function resolveBrowserName(): SupportedBrowser {
-    const requested = (process.env.BROWSER ?? 'chrome').toLowerCase();
+    const requested = (process.env.BROWSER ?? 'chrome').trim().toLowerCase();
     if (!SUPPORTED_BROWSERS.includes(requested as SupportedBrowser)) {
         throw new Error(
             `Unsupported BROWSER "${requested}". Supported values: ${SUPPORTED_BROWSERS.join(', ')}.`
@@ -18,8 +18,14 @@ function resolveBrowserName(): SupportedBrowser {
     return requested as SupportedBrowser;
 }
 
+// Stricter than a plain `=== 'true'` check so a typo (e.g. `HEADLESS=1`)
+// fails loudly instead of silently running headed.
 function resolveHeadless(): boolean {
-    return process.env.HEADLESS === 'true';
+    const requested = (process.env.HEADLESS ?? 'false').trim().toLowerCase();
+    if (requested !== 'true' && requested !== 'false') {
+        throw new Error(`Unsupported HEADLESS "${requested}". Supported values: true, false.`);
+    }
+    return requested === 'true';
 }
 
 function buildCapabilities(browserName: SupportedBrowser, headless: boolean): WebdriverIO.Capabilities[] {

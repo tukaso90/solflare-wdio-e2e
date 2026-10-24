@@ -66,8 +66,7 @@ class WalletManagementPage extends BasePage {
 
     public async openWalletManagement(): Promise<void> {
         logger.info('Opening wallet management via the header avatar');
-        await this.avatarWalletPicker.waitForClickable();
-        await this.avatarWalletPicker.click();
+        await this.clickWhenReady(this.avatarWalletPicker);
     }
 
     public async isMainWalletDisplayed(): Promise<boolean> {
@@ -95,12 +94,10 @@ class WalletManagementPage extends BasePage {
 
     public async openShowOrHideWallets(): Promise<void> {
         logger.info('Opening the recovery phrase options menu');
-        await this.recoveryPhraseOptionsButton.waitForClickable();
-        await this.recoveryPhraseOptionsButton.click();
+        await this.clickWhenReady(this.recoveryPhraseOptionsButton);
 
         logger.info('Clicking "Show or hide wallets"');
-        await this.btnShowOrHideWallets.waitForClickable();
-        await this.btnShowOrHideWallets.click();
+        await this.clickWhenReady(this.btnShowOrHideWallets);
     }
 
     public async isFirstToggleDisabled(): Promise<boolean> {
@@ -113,9 +110,28 @@ class WalletManagementPage extends BasePage {
 
     public async isFirstToggleOn(): Promise<boolean> {
         const firstToggle = this.walletToggles[0];
+        await firstToggle.waitForDisplayed();
         const isOn = (await firstToggle.getAttribute('data-state')) === 'checked';
         logger.info(`Checked first wallet toggle is on: ${isOn}`);
         return isOn;
+    }
+
+    /**
+     * Resolves the toggle at a 1-based list position, re-querying the DOM
+     * fresh rather than reusing a previously-fetched list. Toggling one
+     * wallet can re-render the list (the toggled row may re-sort, for
+     * instance), so indexing into a stale snapshot risks acting on the
+     * wrong wallet for a later position.
+     */
+    private async getToggleAtPosition(position: number): Promise<WebdriverIO.Element> {
+        const toggles = await this.walletToggles;
+        const toggle = toggles[position - 1];
+        if (!toggle) {
+            throw new Error(
+                `Expected at least ${position} wallet toggle(s) in the "Show or hide wallets" list, found ${toggles.length}.`
+            );
+        }
+        return toggle;
     }
 
     /**
@@ -126,27 +142,27 @@ class WalletManagementPage extends BasePage {
      * later rather than just a count.
      */
     public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
-        const toggles = this.walletToggles;
         const publicKeys: string[] = [];
         for (const position of positions) {
-            const toggle = toggles[position - 1];
+            const toggle = await this.getToggleAtPosition(position);
             const testId = await toggle.getAttribute('data-testid');
             const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
             publicKeys.push(publicKey);
             logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
-            await toggle.click();
+            await this.clickWhenReady(toggle);
         }
         return publicKeys;
     }
 
     public async save(): Promise<void> {
         logger.info('Clicking "Save"');
-        await this.btnSave.waitForClickable();
-        await this.btnSave.click();
+        await this.clickWhenReady(this.btnSave);
 
         // Saving navigates back from the toggle screen to the wallet list;
-        // wait for that screen to unmount so the list isn't read mid-transition.
+        // wait for that screen to unmount, then for the wallet list to
+        // actually render, so callers never read it mid-transition.
         await this.btnSave.waitForExist({ reverse: true });
+        await this.walletListItems[0].waitForDisplayed();
     }
 }
 

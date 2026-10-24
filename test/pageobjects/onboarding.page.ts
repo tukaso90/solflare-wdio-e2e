@@ -49,12 +49,10 @@ class OnboardingPage extends BasePage {
      */
     public async startWalletCreation(): Promise<void> {
         logger.info('Clicking "Get started"');
-        await this.btnGetStarted.waitForClickable();
-        await this.btnGetStarted.click();
+        await this.clickWhenReady(this.btnGetStarted);
 
         logger.info('Clicking "Create new wallet"');
-        await this.btnCreateNewWallet.waitForClickable();
-        await this.btnCreateNewWallet.click();
+        await this.clickWhenReady(this.btnCreateNewWallet);
     }
 
     public async setPassword(password: string): Promise<void> {
@@ -73,16 +71,20 @@ class OnboardingPage extends BasePage {
         logger.info('Accepting the Terms of Service and Privacy Policy');
         await this.checkboxTermsAccepted.waitForExist();
         const checkbox = await this.checkboxTermsAccepted;
-        await browser.execute(
-            (el) => (el as HTMLElement).closest('label')?.click(),
-            checkbox
-        );
+        const clicked = await browser.execute((el) => {
+            const label = (el as HTMLElement).closest('label');
+            label?.click();
+            return label !== null;
+        }, checkbox);
+
+        if (!clicked) {
+            throw new Error('Terms checkbox has no wrapping <label> to click — markup may have changed.');
+        }
     }
 
     public async clickContinue(): Promise<void> {
         logger.info('Clicking "Continue"');
-        await this.btnContinue.waitForClickable();
-        await this.btnContinue.click();
+        await this.clickWhenReady(this.btnContinue);
     }
 }
 
