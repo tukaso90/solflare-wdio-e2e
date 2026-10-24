@@ -1,4 +1,5 @@
 import BasePage from './base.page.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
  * Wallet creation flow served at /onboard.
@@ -38,6 +39,7 @@ class OnboardingPage extends BasePage {
     }
 
     public async open(): Promise<void> {
+        logger.info('Opening the onboarding page (/onboard)');
         await super.open('/onboard');
     }
 
@@ -46,14 +48,17 @@ class OnboardingPage extends BasePage {
      * choice, landing on the set-a-password screen.
      */
     public async startWalletCreation(): Promise<void> {
+        logger.info('Clicking "Get started"');
         await this.btnGetStarted.waitForClickable();
         await this.btnGetStarted.click();
 
+        logger.info('Clicking "Create new wallet"');
         await this.btnCreateNewWallet.waitForClickable();
         await this.btnCreateNewWallet.click();
     }
 
     public async setPassword(password: string): Promise<void> {
+        logger.info('Entering password into both password fields');
         await this.inputNewPassword.waitForDisplayed();
         await this.inputNewPassword.setValue(password);
         await this.inputRepeatPassword.setValue(password);
@@ -65,6 +70,7 @@ class OnboardingPage extends BasePage {
      * label (the surface a real user clicks) is what gets clicked here.
      */
     public async acceptTerms(): Promise<void> {
+        logger.info('Accepting the Terms of Service and Privacy Policy');
         await this.checkboxTermsAccepted.waitForExist();
         const checkbox = await this.checkboxTermsAccepted;
         await browser.execute(
@@ -74,6 +80,7 @@ class OnboardingPage extends BasePage {
     }
 
     public async clickContinue(): Promise<void> {
+        logger.info('Clicking "Continue"');
         await this.btnContinue.waitForClickable();
         await this.btnContinue.click();
     }

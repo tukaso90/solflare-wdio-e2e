@@ -1,4 +1,5 @@
 import BasePage from './base.page.ts';
+import { logger } from '../utils/logger.ts';
 
 // Both the wallet-row and toggle testids are the wallet's public key
 // appended to one of these prefixes. The key is generated fresh for every
@@ -64,6 +65,7 @@ class WalletManagementPage extends BasePage {
     }
 
     public async openWalletManagement(): Promise<void> {
+        logger.info('Opening wallet management via the header avatar');
         await this.avatarWalletPicker.waitForClickable();
         await this.avatarWalletPicker.click();
     }
@@ -71,7 +73,9 @@ class WalletManagementPage extends BasePage {
     public async isMainWalletDisplayed(): Promise<boolean> {
         const firstWallet = this.walletListItems[0];
         await firstWallet.waitForDisplayed();
-        return (await firstWallet.getText()).includes('Main Wallet');
+        const isDisplayed = (await firstWallet.getText()).includes('Main Wallet');
+        logger.info(`Checked "Main Wallet" is displayed: ${isDisplayed}`);
+        return isDisplayed;
     }
 
     /**
@@ -90,9 +94,11 @@ class WalletManagementPage extends BasePage {
     }
 
     public async openShowOrHideWallets(): Promise<void> {
+        logger.info('Opening the recovery phrase options menu');
         await this.recoveryPhraseOptionsButton.waitForClickable();
         await this.recoveryPhraseOptionsButton.click();
 
+        logger.info('Clicking "Show or hide wallets"');
         await this.btnShowOrHideWallets.waitForClickable();
         await this.btnShowOrHideWallets.click();
     }
@@ -100,12 +106,16 @@ class WalletManagementPage extends BasePage {
     public async isFirstToggleDisabled(): Promise<boolean> {
         const firstToggle = this.walletToggles[0];
         await firstToggle.waitForDisplayed();
-        return !(await firstToggle.isEnabled());
+        const isDisabled = !(await firstToggle.isEnabled());
+        logger.info(`Checked first wallet toggle is disabled: ${isDisabled}`);
+        return isDisabled;
     }
 
     public async isFirstToggleOn(): Promise<boolean> {
         const firstToggle = this.walletToggles[0];
-        return (await firstToggle.getAttribute('data-state')) === 'checked';
+        const isOn = (await firstToggle.getAttribute('data-state')) === 'checked';
+        logger.info(`Checked first wallet toggle is on: ${isOn}`);
+        return isOn;
     }
 
     /**
@@ -121,13 +131,16 @@ class WalletManagementPage extends BasePage {
         for (const position of positions) {
             const toggle = toggles[position - 1];
             const testId = await toggle.getAttribute('data-testid');
-            publicKeys.push(publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX));
+            const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
+            publicKeys.push(publicKey);
+            logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
             await toggle.click();
         }
         return publicKeys;
     }
 
     public async save(): Promise<void> {
+        logger.info('Clicking "Save"');
         await this.btnSave.waitForClickable();
         await this.btnSave.click();
 
