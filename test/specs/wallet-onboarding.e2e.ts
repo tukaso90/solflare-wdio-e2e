@@ -25,18 +25,23 @@ describe('Wallet onboarding', () => {
         await expect(walletManagementPage.firstWalletToggle).toBeDisabled();
         await expect(walletManagementPage.firstWalletToggle).toHaveAttribute('data-state', 'checked');
 
-        const selectedWallets = await walletManagementPage.selectWalletsAtPositions([3, 4]);
-        for (const { toggle } of selectedWallets) {
-            await expect(toggle).toHaveAttribute('data-state', 'checked');
+        const selectedPublicKeys = await walletManagementPage.selectWalletsAtPositions([3, 4]);
+        for (const publicKey of selectedPublicKeys) {
+            // Re-located by full testid rather than reusing the element
+            // captured before the click: toggling one wallet can re-render
+            // the list, which would invalidate a stale element reference.
+            await expect(walletManagementPage.getToggleByPublicKey(publicKey)).toHaveAttribute(
+                'data-state',
+                'checked'
+            );
         }
 
         await walletManagementPage.save();
-        await walletManagementPage.waitForWalletCount(1 + selectedWallets.length);
+        await walletManagementPage.waitForWalletCount(1 + selectedPublicKeys.length);
 
         // The recovery phrase list must contain exactly the original wallet
         // plus the two newly selected ones — not just the right count.
         const finalPublicKeys = await walletManagementPage.getWalletPublicKeys();
-        const selectedPublicKeys = selectedWallets.map((wallet) => wallet.publicKey);
         expect(finalPublicKeys.sort()).toEqual([mainWalletPublicKey, ...selectedPublicKeys].sort());
     });
 });

@@ -17,12 +17,6 @@ function publicKeyFromTestId(testId: string | null, prefix: string): string {
     return testId.slice(prefix.length);
 }
 
-/** A wallet toggled on from the "Show or hide wallets" screen. */
-export interface SelectedWallet {
-    toggle: WebdriverIO.Element;
-    publicKey: string;
-}
-
 /**
  * "My wallets" management panel, opened from the avatar in the app header.
  *
@@ -82,6 +76,16 @@ class WalletManagementPage extends BasePage {
     // the main wallet can't be hidden.
     public get firstWalletToggle() {
         return this.walletToggles[0];
+    }
+
+    /**
+     * Resolves a toggle by its wallet's full public key rather than by
+     * list position — used to re-locate a toggle after it's been clicked,
+     * since toggling one wallet can re-render the list and invalidate a
+     * previously-fetched element reference.
+     */
+    public getToggleByPublicKey(publicKey: string) {
+        return $(`[data-testid="${WALLET_TOGGLE_TESTID_PREFIX}${publicKey}"]`);
     }
 
     public async openWalletManagement(): Promise<void> {
@@ -150,21 +154,21 @@ class WalletManagementPage extends BasePage {
     /**
      * Toggles on the wallets at the given 1-based list positions, matching
      * the "select the 3rd and 4th list item" wording in the test steps.
-     * Returns each toggle element alongside the public key read from its
-     * testid before clicking, so the caller can assert on both the
-     * toggle's resulting state and wallet identity.
+     * Returns each selected wallet's public key (read from its toggle's
+     * testid before clicking), so the caller can assert on wallet identity
+     * and re-locate each toggle afterward via getToggleByPublicKey().
      */
-    public async selectWalletsAtPositions(positions: number[]): Promise<SelectedWallet[]> {
-        const selected: SelectedWallet[] = [];
+    public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
+        const publicKeys: string[] = [];
         for (const position of positions) {
             const toggle = await this.getToggleAtPosition(position);
             const testId = await toggle.getAttribute('data-testid');
             const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
+            publicKeys.push(publicKey);
             logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
             await this.clickWhenReady(toggle);
-            selected.push({ toggle, publicKey });
         }
-        return selected;
+        return publicKeys;
     }
 
     public async save(): Promise<void> {

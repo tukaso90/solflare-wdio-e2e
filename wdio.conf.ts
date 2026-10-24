@@ -51,7 +51,10 @@ function buildCapabilities(browserName: SupportedBrowser, headless: boolean): We
                 // "HeadlessChrome/<version>" token with a standard one:
                 // Solflare's bot protection blocks sessions that advertise
                 // themselves as headless Chrome specifically (confirmed by
-                // testing — see README), and this is enough to pass.
+                // testing — see README), and this is enough to pass. It's a
+                // deliberately static string, not derived from the installed
+                // Chrome version — the site only appears to check for the
+                // "HeadlessChrome" token, not an exact version match.
                 args: headless
                     ? [
                           '--headless=new',

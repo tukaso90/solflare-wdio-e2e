@@ -8,7 +8,7 @@ the two newly added ones.
 
 ## Prerequisites
 
-- Node.js 20 or later (tested on v24)
+- Node.js 22 or later (tested on v24; CI uses Node 24)
 - Nothing else. Browser binaries (Chrome and Firefox) are downloaded
   automatically by WebdriverIO's driver manager on first run — there's no
   need to have either browser, or a matching driver, already installed.
@@ -70,15 +70,15 @@ npm run typecheck
 ```
 test/
   pageobjects/
-    base.page.ts              # shared navigation + click helpers
-    onboarding.page.ts        # wallet creation: password, terms, continue
-    wallet-management.page.ts # wallet list, show/hide wallets, save
+    base.page.ts               # shared navigation + click helpers
+    onboarding.page.ts         # wallet creation: password, terms, continue
+    wallet-management.page.ts  # wallet list, show/hide wallets, save
   specs/
-    wallet-onboarding.e2e.ts  # the end-to-end test
+    wallet-onboarding.e2e.ts   # the end-to-end test
   utils/
-    logger.ts                 # winston logger (console + logs/test.log)
-    screenshot.ts             # failure screenshot capture (screenshots/)
-wdio.conf.ts      # runner config, browser selection, hooks
+    logger.ts                  # winston logger (console + logs/test.log)
+    screenshot.ts              # failure screenshot capture (screenshots/)
+wdio.conf.ts                   # runner config, browser selection, hooks
 tsconfig.json
 ```
 
@@ -92,6 +92,16 @@ tsconfig.json
   `screenshots/` via an `afterTest` hook in `wdio.conf.ts`. Both
   directories are git-ignored and created on demand — they won't exist
   until a test has actually run.
+
+## Test data cleanup
+
+No cleanup step is needed after a test run. Solflare is a self-custodial
+wallet: "creating a wallet" is a purely client-side operation (a BIP39
+recovery phrase and keypairs derived from it, stored only in the browser's
+`localStorage`) — nothing is registered on Solflare's servers just by
+generating one. On top of that, each run launches Chrome/Firefox with a
+fresh temporary profile that the driver deletes when the session ends, so
+even that local storage doesn't persist between runs.
 
 ## Assumptions and deviations from the written steps
 
