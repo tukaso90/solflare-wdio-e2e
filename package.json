@@ -3,6 +3,9 @@
   "description": "WebdriverIO E2E test suite for the Solflare wallet onboarding flow",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@wdio/cli": "^10.1.0",
@@ -16,6 +19,7 @@
     "winston": "^3.19.0"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "wdio run ./wdio.conf.ts",
     "test:chrome": "cross-env BROWSER=chrome npm test",
     "test:firefox": "cross-env BROWSER=firefox npm test",

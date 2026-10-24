@@ -52,20 +52,33 @@ committed default is safe:
 TEST_PASSWORD='Some-Other-Password-1!' npm test
 ```
 
+## CI
+
+A minimal GitHub Actions workflow (`.github/workflows/e2e.yml`) runs on
+every push: typecheck, then the suite in Firefox headless — chosen over
+Chrome headless for CI since it needs no extra flags (see "Other
+environment notes" below for what Chrome headless requires and why).
+
+## Typecheck
+
+```bash
+npm run typecheck
+```
+
 ## Project structure
 
 ```
 test/
   pageobjects/
-    base.page.ts              # shared navigation helper
+    base.page.ts              # shared navigation + click helpers
     onboarding.page.ts        # wallet creation: password, terms, continue
     wallet-management.page.ts # wallet list, show/hide wallets, save
   specs/
     wallet-onboarding.e2e.ts  # the end-to-end test
   utils/
     logger.ts                 # winston logger (console + logs/test.log)
-    screenshot.ts              # failure screenshot capture (screenshots/)
-wdio.conf.ts                  # runner config, browser selection, hooks
+    screenshot.ts             # failure screenshot capture (screenshots/)
+wdio.conf.ts      # runner config, browser selection, hooks
 tsconfig.json
 ```
 
@@ -96,10 +109,14 @@ being encoded into the page objects:
    same label that only expands/collapses the wallet list in place and
    doesn't lead anywhere. The icon that actually opens the menu containing
    "Show or hide wallets" is the three-dot options button.
-3. **The terms checkbox is a visually-hidden input.** `input[name="termsAccepted"]`
-   renders as a 1×1px accessibility target; the visible checkbox is drawn
-   by its wrapping `<label>`. The test clicks the label (via
-   `closest('label')`), which is what a real user actually clicks.
+3. **The terms checkbox is a visually-hidden input, wrapped in two nested
+   `<label>`s.** `input[name="termsAccepted"]` renders as a 1×1px
+   accessibility target; the visible 24×24px checkbox box is drawn by an
+   inner `<label>`, which is itself nested inside a second, outer `<label>`
+   spanning the whole "I agree to the Terms of Service and Privacy
+   Policy." row (including both links). The test clicks the inner label —
+   selected via `ancestor::label[not(.//label)]`, since a plain
+   `ancestor::label` match is ambiguous between the two.
 4. **Wallet and toggle identifiers are dynamic.** Both the wallet-row and
    toggle `data-testid`s are the wallet's public key appended to a fixed
    prefix (e.g. `tgl-li-wallets-<publicKey>`), and a fresh key is
