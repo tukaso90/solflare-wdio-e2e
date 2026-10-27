@@ -31,22 +31,22 @@ class WalletManagementPage extends BasePage {
     // Targets the avatar itself rather than the wider wallet-picker section:
     // that section also contains a "copy address" button, and a real mouse
     // click at the section's bounding-box center can land on it instead.
-    public get avatarWalletPicker() {
+    private get avatarWalletPicker() {
         return $('[data-testid="wallet-picker-avatar"]');
     }
 
     // The "arrow icon next to the RECOVERY PHRASE label" from the written
     // steps is this options (kebab) button, not the separate chevron that
     // only expands/collapses the list in place — see README.
-    public get recoveryPhraseOptionsButton() {
+    private get recoveryPhraseOptionsButton() {
         return $('[data-testid="icon-btn-wallet-section-options"]');
     }
 
-    public get btnShowOrHideWallets() {
+    private get btnShowOrHideWallets() {
         return $('[data-testid="li-recovery-phrase-show-or-hide"]');
     }
 
-    public get btnSave() {
+    private get btnSave() {
         return $('[data-testid="btn-save"]');
     }
 
@@ -54,7 +54,7 @@ class WalletManagementPage extends BasePage {
     // Scoped to the stable testid prefix rather than a page-wide selector;
     // see the WALLET_ROW_TESTID_PREFIX comment above for why positional
     // matching is still required on top of that.
-    public get walletListItems() {
+    private get walletListItems() {
         return $$(`[data-testid^="${WALLET_ROW_TESTID_PREFIX}"]`);
     }
 
@@ -68,7 +68,7 @@ class WalletManagementPage extends BasePage {
     // stable testid prefix (rather than the page-wide [role="switch"]) so
     // this can't accidentally match an unrelated switch control elsewhere
     // on the screen. Same positional-matching constraint as walletListItems.
-    public get walletToggles() {
+    private get walletToggles() {
         return $$(`[data-testid^="${WALLET_TOGGLE_TESTID_PREFIX}"]`);
     }
 

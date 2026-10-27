@@ -12,19 +12,19 @@ import { logger } from '../utils/logger.ts';
  * README for the full list of deviations from the written steps).
  */
 class OnboardingPage extends BasePage {
-    public get btnGetStarted() {
+    private get btnGetStarted() {
         return $('[data-testid="btn-get-started"]');
     }
 
-    public get btnCreateNewWallet() {
+    private get btnCreateNewWallet() {
         return $('[data-testid="btn-manual-create"]');
     }
 
-    public get inputNewPassword() {
+    private get inputNewPassword() {
         return $('[data-testid="input-new-password"]');
     }
 
-    public get inputRepeatPassword() {
+    private get inputRepeatPassword() {
         return $('[data-testid="input-repeat-password"]');
     }
 
@@ -42,11 +42,11 @@ class OnboardingPage extends BasePage {
     // (which also wraps the two links), so a plain `ancestor::label` match
     // is ambiguous: it resolves to both. This XPath isolates the inner one
     // by selecting the ancestor label that itself contains no nested label.
-    public get labelTermsAccepted() {
+    private get labelTermsAccepted() {
         return $('//input[@name="termsAccepted"]/ancestor::label[not(.//label)]');
     }
 
-    public get btnContinue() {
+    private get btnContinue() {
         return $('[data-testid="btn-continue"]');
     }
 

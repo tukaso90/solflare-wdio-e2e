@@ -101,6 +101,13 @@ starts every session with a fresh temporary profile and discards it when
 the session ends, so each run is isolated and no test data accumulates
 between runs.
 
+This holds per spec file, not just per run: each spec file gets its own
+worker and its own fresh browser session. If more tests are ever added to
+the same spec file, each should start from a clean state too — e.g. via
+`browser.reloadSession()` in an `afterEach` hook. That isn't included now
+because the suite has a single test; adding it today would only add
+runtime without changing any actual behavior.
+
 ## Assumptions and deviations from the written steps
 
 The written test steps don't match the live site exactly in a few places.
