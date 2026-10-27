@@ -23,7 +23,7 @@ describe('Wallet onboarding', () => {
 
         await walletManagementPage.openShowOrHideWallets();
         await expect(walletManagementPage.firstWalletToggle).toBeDisabled();
-        await expect(walletManagementPage.firstWalletToggle).toHaveAttribute('data-state', 'checked');
+        await expect(walletManagementPage.firstWalletToggle).toHaveAttribute('aria-checked', 'true');
 
         const selectedPublicKeys = await walletManagementPage.selectWalletsAtPositions([3, 4]);
         for (const publicKey of selectedPublicKeys) {
@@ -31,8 +31,8 @@ describe('Wallet onboarding', () => {
             // captured before the click: toggling one wallet can re-render
             // the list, which would invalidate a stale element reference.
             await expect(walletManagementPage.getToggleByPublicKey(publicKey)).toHaveAttribute(
-                'data-state',
-                'checked'
+                'aria-checked',
+                'true'
             );
         }
 

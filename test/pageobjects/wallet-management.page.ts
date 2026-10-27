@@ -134,49 +134,40 @@ class WalletManagementPage extends BasePage {
     }
 
     /**
-     * Resolves the toggle at a 1-based position in the list *as currently
-     * displayed*. Only meaningful as a one-time lookup against the list
-     * before any click happens on this screen — see selectWalletsAtPositions
-     * for why positions aren't re-resolved after a click.
-     */
-    private async getToggleAtPosition(position: number): Promise<WebdriverIO.Element> {
-        const toggles = await this.walletToggles;
-        const toggle = toggles[position - 1];
-        if (!toggle) {
-            throw new Error(
-                `Expected at least ${position} wallet toggle(s) in the "Show or hide wallets" list, found ${toggles.length}.`
-            );
-        }
-        return toggle;
-    }
-
-    /**
      * Toggles on the wallets at the given 1-based positions in the list as
-     * *initially displayed*, matching the "select the 3rd and 4th list
-     * item" wording in the test steps. Returns each selected wallet's
-     * public key, so the caller can assert on wallet identity and re-locate
-     * each toggle afterward via getToggleByPublicKey().
-     *
-     * Deliberately two phases. Phase 1 resolves every requested position to
-     * a wallet identity (public key) and checks its pre-click toggle state,
-     * all against the list as it existed before any click — re-reading a
-     * position after a click would be wrong if toggling re-renders/reorders
-     * the list, since position 4 could then point to the wallet just
-     * toggled, or a different one entirely. Phase 2 clicks each toggle,
-     * addressed by public key (getToggleByPublicKey), never by position.
+     * initially displayed (matching "select the 3rd and 4th list item").
+     * Phase 1 resolves every position's wallet identity and pre-click state
+     * from a single snapshot of the list; phase 2 clicks each toggle by
+     * public key, never by position, since toggling can reorder the list.
+     * Returns each selected wallet's public key.
      */
     public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
+        if (new Set(positions).size !== positions.length) {
+            throw new Error(`Duplicate positions requested: ${positions.join(', ')}`);
+        }
+
+        const toggles = await this.walletToggles;
         const selections: Array<{ position: number; publicKey: string }> = [];
 
         for (const position of positions) {
-            const toggle = await this.getToggleAtPosition(position);
+            const toggle = toggles[position - 1];
+            if (!toggle) {
+                throw new Error(
+                    `Expected at least ${position} wallet toggle(s) in the "Show or hide wallets" list, found ${toggles.length}.`
+                );
+            }
+
             const testId = await toggle.getAttribute('data-testid');
             const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
 
-            const state = await toggle.getAttribute('data-state');
-            if (state !== 'unchecked') {
+            // aria-checked is the standard accessibility state for a
+            // role="switch" element; data-state is specific to the
+            // underlying UI library. Confirmed live that both are present
+            // and agree — aria-checked is the more portable one to depend on.
+            const ariaChecked = await toggle.getAttribute('aria-checked');
+            if (ariaChecked !== 'false') {
                 throw new Error(
-                    `Wallet at position ${position} is already on (data-state="${state}", publicKey ${publicKey}) — expected "unchecked" before toggling.`
+                    `Wallet at position ${position} is already on (aria-checked="${ariaChecked}", publicKey ${publicKey}) — expected "false" before toggling.`
                 );
             }
 
