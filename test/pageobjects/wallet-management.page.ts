@@ -134,11 +134,10 @@ class WalletManagementPage extends BasePage {
     }
 
     /**
-     * Resolves the toggle at a 1-based list position, re-querying the DOM
-     * fresh rather than reusing a previously-fetched list. Toggling one
-     * wallet can re-render the list (the toggled row may re-sort, for
-     * instance), so indexing into a stale snapshot risks acting on the
-     * wrong wallet for a later position.
+     * Resolves the toggle at a 1-based position in the list *as currently
+     * displayed*. Only meaningful as a one-time lookup against the list
+     * before any click happens on this screen — see selectWalletsAtPositions
+     * for why positions aren't re-resolved after a click.
      */
     private async getToggleAtPosition(position: number): Promise<WebdriverIO.Element> {
         const toggles = await this.walletToggles;
@@ -152,23 +151,44 @@ class WalletManagementPage extends BasePage {
     }
 
     /**
-     * Toggles on the wallets at the given 1-based list positions, matching
-     * the "select the 3rd and 4th list item" wording in the test steps.
-     * Returns each selected wallet's public key (read from its toggle's
-     * testid before clicking), so the caller can assert on wallet identity
-     * and re-locate each toggle afterward via getToggleByPublicKey().
+     * Toggles on the wallets at the given 1-based positions in the list as
+     * *initially displayed*, matching the "select the 3rd and 4th list
+     * item" wording in the test steps. Returns each selected wallet's
+     * public key, so the caller can assert on wallet identity and re-locate
+     * each toggle afterward via getToggleByPublicKey().
+     *
+     * Deliberately two phases. Phase 1 resolves every requested position to
+     * a wallet identity (public key) and checks its pre-click toggle state,
+     * all against the list as it existed before any click — re-reading a
+     * position after a click would be wrong if toggling re-renders/reorders
+     * the list, since position 4 could then point to the wallet just
+     * toggled, or a different one entirely. Phase 2 clicks each toggle,
+     * addressed by public key (getToggleByPublicKey), never by position.
      */
     public async selectWalletsAtPositions(positions: number[]): Promise<string[]> {
-        const publicKeys: string[] = [];
+        const selections: Array<{ position: number; publicKey: string }> = [];
+
         for (const position of positions) {
             const toggle = await this.getToggleAtPosition(position);
             const testId = await toggle.getAttribute('data-testid');
             const publicKey = publicKeyFromTestId(testId, WALLET_TOGGLE_TESTID_PREFIX);
-            publicKeys.push(publicKey);
-            logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
-            await this.clickWhenReady(toggle);
+
+            const state = await toggle.getAttribute('data-state');
+            if (state !== 'unchecked') {
+                throw new Error(
+                    `Wallet at position ${position} is already on (data-state="${state}", publicKey ${publicKey}) — expected "unchecked" before toggling.`
+                );
+            }
+
+            selections.push({ position, publicKey });
         }
-        return publicKeys;
+
+        for (const { position, publicKey } of selections) {
+            logger.info(`Toggling on wallet at position ${position} (${publicKey})`);
+            await this.clickWhenReady(this.getToggleByPublicKey(publicKey));
+        }
+
+        return selections.map((selection) => selection.publicKey);
     }
 
     public async save(): Promise<void> {
