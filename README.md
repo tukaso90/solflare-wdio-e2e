@@ -54,10 +54,11 @@ TEST_PASSWORD='Some-Other-Password-1!' npm test
 
 ## CI
 
-A minimal GitHub Actions workflow (`.github/workflows/e2e.yml`) runs on
-every push: typecheck, then the suite in Firefox headless — chosen over
-Chrome headless for CI since it needs no extra flags (see "Other
-environment notes" below for what Chrome headless requires and why).
+A GitHub Actions workflow (`.github/workflows/e2e.yml`) runs on every push:
+typecheck, then the suite headless in both Chrome and Firefox, via a
+`strategy.matrix` (`fail-fast: false`, so one browser's failure doesn't
+cancel the other mid-run). Each matrix job uploads its own failure
+artifacts, named `failure-artifacts-<browser>` so the two don't collide.
 
 ## Typecheck
 
